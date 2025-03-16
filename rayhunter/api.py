@@ -20,8 +20,8 @@ class RayhunterApi:
     def get_qmdl_file(self, filename: str):
         raise NotImplementedError()
     
-    def start_analysis(self):
+    def start_recording(self):
         raise NotImplementedError()
     
-    def stop_analysis(self):
+    def stop_recording(self):
         raise NotImplementedError()
