@@ -4,12 +4,26 @@ import logging
 import pathlib
 import sys
 
+from rayhunter import RayhunterApi
+
 
 class PyRayHunter:
 
     def __init__(self, output_folder: pathlib.Path):
         self._output_folder = output_folder
         
+    def _save_http_file(self, file_contents: bytes, device_name: str, file_name: str):
+        file_type = file_name.split(".")[1]
+        parent_folder = self._output_folder.joinpath(*(device_name, file_type))
+        if not parent_folder.exists():
+            logging.info(f"Creating directory structure: {parent_folder}")
+            parent_folder.mkdir(parents=True)
+        output_path = parent_folder.joinpath(file_name)
+        logging.info(f"Writing {len(file_contents)} bytes to path: {output_path}")
+        with output_path.open(mode="wb") as outfile:
+            bytes_written = outfile.write(file_contents)
+        logging.info(f"Wrote {bytes_written} bytes to path: {output_path}")
+
     def cleanup_files(self, device_id: str):
         logging.info(f"Cleaning up all files on {device_id} via ADB.")
 
@@ -18,12 +32,34 @@ class PyRayHunter:
 
     def get_pcap_files(self, device_id: str):
         logging.info(f"Fetching all PCAP files on {device_id} via API.")
+        api = self._get_http_api("127.0.0.1", 8000)
+        manifest = api.get_manifest()
+        for pcap_file in manifest.entries:
+            logging.info(f"Downloading PCAP file for entry: {pcap_file.name}")
+            pcap_file_contents = api.get_pcap_file(pcap_file.name)
+            logging.info(f"PCAP: Downloaded {len(pcap_file_contents)} bytes")
+            self._save_http_file(pcap_file_contents, device_id, f"{pcap_file.name}.pcap")
 
     def get_qmdl_files(self, device_id: str):
         logging.info(f"Fetching all QMDL files on {device_id} via API.")
+        api = self._get_http_api("127.0.0.1", 8000)
+        manifest = api.get_manifest()
+        for qmdl_file in manifest.entries:
+            logging.info(f"Downloading QMDL file for entry: {qmdl_file.name}")
+            qmdl_file_contents = api.get_qmdl_file(qmdl_file.name)
+            logging.info(f"QMDL: Expected {qmdl_file.qmdl_size_bytes} bytes, got {len(qmdl_file_contents)} bytes")
+            self._save_http_file(qmdl_file_contents, device_id, f"{qmdl_file.name}.qmdl")
 
     def list_devices(self):
         logging.info(f"Listing all connected ADB devices.")
+
+    @staticmethod
+    def _get_http_api(hostname: str, port: int) -> RayhunterApi:
+        api = RayhunterApi(hostname, port)
+        if api.active_capture:
+            logging.info("Stopping active capture before continuing")
+            api.stop_recording()
+        return api
 
 
 def setup_logging(output_folder: pathlib.Path):
@@ -41,7 +77,7 @@ def setup_logging(output_folder: pathlib.Path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog=__file__, description="Automated bulk data extraction and maintentance tool for Rayhunter (usb-only)")
-    parser.add_argument("-o", "--output", default=os.path.expandvars("~/rayhunter"), help="Path to write data (default: %(default)s)")
+    parser.add_argument("-o", "--output", default=os.path.expandvars("$HOME/rayhunter"), help="Path to write data (default: %(default)s)")
     parser.add_argument("-l", "--list", default=False, action="store_true", help="List connected USB devices and exit.")
     parser.add_argument("-c", "--cleanup", default=False, action="store_true", help="Remove all analysis files using ADB to free up disk space")
     parser.add_argument("-d", "--device", default=None, help="Perform actions against this device")
@@ -71,19 +107,19 @@ if __name__ == "__main__":
         
         if arguments.pcap:
 
-            rayhunter.get_pcap_files(arguments.device_id)
+            rayhunter.get_pcap_files(arguments.device)
 
         if arguments.qmdl:
 
-            rayhunter.get_qmdl_files(arguments.device_id)
+            rayhunter.get_qmdl_files(arguments.device)
 
         if arguments.ndjson:
 
-            rayhunter.get_ndjson_files(arguments.device_id)
+            rayhunter.get_ndjson_files(arguments.device)
 
         if arguments.cleanup:
 
-            rayhunter.cleanup_files(arguments.device_id)
+            rayhunter.cleanup_files(arguments.device)
 
     else:
         
