@@ -36,3 +36,5 @@ options:
 ## Caveats
 
 I'm using this tool to help me learn more about Rayhunter and to develop tooling around LTE analysis. It's subject to change at a whim and it very definitely should not be relied upon in high risk situations.
+
+**Download file sizes**: This tool validates that downloaded QMDL file sizes matches the QMDL file size on disk, and logs if there's a mismatch. There is no size information available for PCAP files via the HTTP API.
