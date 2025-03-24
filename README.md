@@ -1,4 +1,4 @@
-# [WIP] PyRayhunter 
+# [WIP] Rayhunter Utils 
 Automated bulk data extraction and maintenance tool for [EFF's Rayhunter](https://github.com/EFForg/rayhunter) (usb-only)
 
 **Note**: I am in no way affiliated with the EFF or with the Rayhunter project. I just think it's neat.
